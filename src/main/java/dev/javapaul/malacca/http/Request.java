@@ -253,7 +253,7 @@ public class Request<T> {
 
     /**
      * Returns the deserialized body as an instance of the declared type T.
-     * If Request<T> is Request><?> an exception is thrown.
+     * If T is ? (Wildcard) an exception is thrown.
      *
      * @return the typed body, or null if absent
      */
@@ -266,7 +266,7 @@ public class Request<T> {
 
     /**
      * Returns all top-level body fields as a map.
-     * Use this when no typed body class is declared (Request<?>).
+     * Use this when no typed body class is declared.
      * Jackson preserves JSON types — numbers as Integer/Long/Double,
      * booleans as Boolean, strings as String, nested objects as Map, arrays as List.
      * Returns an empty map if the request has no body.

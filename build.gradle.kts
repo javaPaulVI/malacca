@@ -2,7 +2,7 @@ plugins {
     id("java-library")
     id("maven-publish")
     id("signing")
-    id("org.sonatype.central.publish") version "0.6.0"
+    id("com.vanniktech.maven.publish") version "0.36.0"
 }
 
 group = "dev.javapaul"
@@ -25,37 +25,38 @@ dependencies {
     implementation("com.fasterxml.jackson.module:jackson-module-jsonSchema:2.17.0")
 }
 
-publishing {
-    publications {
-        create<MavenPublication>("maven") {
-            groupId = "io.github.yourusername"
-            artifactId = "malacca"
-            version = "0.1.0"
-            from(components["java"])
+mavenPublishing {
+    coordinates("io.github.javapaulvi", "malacca", "0.1.0")
 
-            pom {
-                name = "Malacca"
-                description = "A lightweight Java API framework, inspired by FastAPI  and ExpressJS"
-                url = "https://github.com/yourusername/malacca"
-
-                licenses {
-                    license {
-                        name = "MIT License"
-                        url = "https://opensource.org/licenses/MIT"
-                    }
-                }
-                developers {
-                    developer {
-                        name = "Paul Hipper"
-                        email = "paul@be-hip.eu"
-                    }
-                }
-                scm {
-                    connection = "scm:git:git://github.com/yourusername/malacca.git"
-                    developerConnection = "scm:git:ssh://github.com:yourusername/malacca.git"
-                    url = "https://github.com/yourusername/malacca/tree/main"
-                }
+    pom {
+        name.set("Malacca")
+        description.set("A lightweight Java API framework, inspired by FastAPI and ExpressJS")
+        inceptionYear.set("2026")
+        url.set("https://github.com/javaPaulVI/malacca#/")
+        licenses {
+            license {
+                name.set("MIT Licence")
+                url.set("https://opensource.org/license/MIT")
+                distribution.set("https://opensource.org/license/MIT")
             }
         }
+        developers {
+            developer {
+                id.set("javaPaulVI")
+                name.set("Paul Hipper")
+                url.set("https://github.com/javaPaulVI/")
+            }
+        }
+        scm {
+            url.set("https://github.com/javaPaulVI/malacca#/")
+            connection.set("scm:git:git://github.com/javaPaulVI/malacca.git")
+            developerConnection.set("scm:git:ssh://git@github.com/javaPaulVI/malacca.git")
+        }
     }
+}
+
+mavenPublishing {
+    publishToMavenCentral()
+
+    signAllPublications()
 }

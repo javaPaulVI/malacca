@@ -45,3 +45,11 @@ bin/
 
 ### Gradle ###
 gradle.properties
+FETCH_HEAD
+ORIG_HEAD
+MERGE_HEAD
+*.orig
+git
+
+### Project ###
+src/main/java/dev/javapaul/malacca/test/
