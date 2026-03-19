@@ -121,7 +121,7 @@ tasks.register("release") {
         }
 
         run("git", "add", ".")
-        run("git", "commit", "-m", commitMessage)
+        run("git", "commit", "-m", "$commitMessage $tag")
         run("git", "tag", tag)
         run("git", "push", "origin", "main")
         run("git", "push", "origin", tag)

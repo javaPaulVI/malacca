@@ -1,6 +1,6 @@
 package io.github.javapaulvi.malacca.routing;
 
-import dev.javapaul.malacca.annotation.*;
+import io.github.javapaulvi.malacca.annotation.*;
 import io.github.javapaulvi.malacca.annotation.*;
 import io.github.javapaulvi.malacca.exception.internal.InvalidHandlerException;
 import io.github.javapaulvi.malacca.exception.internal.RouteNotFoundException;

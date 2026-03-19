@@ -13,7 +13,7 @@ import io.github.javapaulvi.malacca.annotation.QueryParam;
 import io.github.javapaulvi.malacca.annotation.QueryParams;
 import io.github.javapaulvi.malacca.exception.internal.MalaccaInternalException;
 import io.github.javapaulvi.malacca.http.HttpMethod;
-import dev.javapaul.malacca.openapi.internal.*;
+import io.github.javapaulvi.malacca.openapi.internal.*;
 import io.github.javapaulvi.malacca.openapi.internal.*;
 import io.github.javapaulvi.malacca.routing.PathMatcher;
 import io.github.javapaulvi.malacca.routing.RouteEntry;
