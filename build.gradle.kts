@@ -1,3 +1,5 @@
+import java.io.File
+
 plugins {
     id("java-library")
     id("maven-publish")
@@ -79,19 +81,21 @@ publishing {
 }
 
 signing {
-    val signingKeyId = System.getenv("SIGNING_KEY_ID")
-    val signingKeyEncoded = System.getenv("SIGNING_SECRET_KEY")
-    val signingPassword = System.getenv("SIGNING_PASSWORD")
+    val keyFile = File(System.getProperty("user.home") + "/.gpg/keyfile")
 
-    if (signingKeyEncoded != null) {
-        val decoded = groovy.json.JsonOutput.toJson(signingKeyEncoded) // wrong approach
-        useInMemoryPgpKeys(signingKeyId, decoded, signingPassword)
+    if (keyFile.exists()) {
+        val keyContent = keyFile.readText(Charsets.UTF_8)  // read raw ASCII-armored key
+        val password = System.getenv("SIGNING_PASSWORD") ?: error("SIGNING_PASSWORD is missing")
+
+        useInMemoryPgpKeys(keyContent, password)
+        println("Using in-memory signing key from ${keyFile.absolutePath}")
     } else {
-        useGpgCmd()
+        println("No key file found, using gpg command if available")
+        useGpgCmd()  // fallback
     }
+
     sign(publishing.publications["maven"])
 }
-
 // -------------------------------------------------------------------------
 // Release task — commit, tag and push to trigger GitHub Actions publish
 // -------------------------------------------------------------------------

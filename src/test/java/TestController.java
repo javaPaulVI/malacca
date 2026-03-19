@@ -1,7 +1,5 @@
-import dev.javapaul.malacca.annotation.*;
-import dev.javapaul.malacca.http.Request;
-
-import java.util.Map;
+import io.github.javapaulvi.malacca.annotation.*;
+import io.github.javapaulvi.malacca.http.Request;
 
 @Controller("/hello")
 public class TestController {

@@ -1,10 +1,13 @@
 import com.fasterxml.jackson.databind.ObjectMapper;
-import dev.javapaul.malacca.Malacca;
-import dev.javapaul.malacca.annotation.*;
-import dev.javapaul.malacca.exception.http.*;
-import dev.javapaul.malacca.http.Request;
-import dev.javapaul.malacca.http.responses.Response;
-import dev.javapaul.malacca.http.responses.PlainTextResponse;
+import io.github.javapaulvi.malacca.Malacca;
+import io.github.javapaulvi.malacca.annotation.*;
+import io.github.javapaulvi.malacca.exception.http.BadRequestException;
+import io.github.javapaulvi.malacca.exception.http.NotFoundException;
+import io.github.javapaulvi.malacca.exception.http.UnauthorizedException;
+import io.github.javapaulvi.malacca.exception.http.UnprocessableEntityException;
+import io.github.javapaulvi.malacca.http.Request;
+import io.github.javapaulvi.malacca.http.responses.Response;
+import io.github.javapaulvi.malacca.http.responses.PlainTextResponse;
 import org.junit.jupiter.api.*;
 
 import java.net.URI;
