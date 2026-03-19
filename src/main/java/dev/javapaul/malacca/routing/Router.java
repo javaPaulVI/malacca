@@ -98,14 +98,13 @@ public class Router {
 
 
     private HttpMethod resolveHttpMethod(java.lang.reflect.Method method) {
-        if (method.isAnnotationPresent(GET.class))    return HttpMethod.GET;
-        if (method.isAnnotationPresent(POST.class))   return HttpMethod.POST;
-        if (method.isAnnotationPresent(PUT.class))    return HttpMethod.PUT;
+        if (method.isAnnotationPresent(GET.class)) return HttpMethod.GET;
+        if (method.isAnnotationPresent(POST.class)) return HttpMethod.POST;
+        if (method.isAnnotationPresent(PUT.class)) return HttpMethod.PUT;
         if (method.isAnnotationPresent(DELETE.class)) return HttpMethod.DELETE;
-        if (method.isAnnotationPresent(PATCH.class))  return HttpMethod.PATCH;
+        if (method.isAnnotationPresent(PATCH.class)) return HttpMethod.PATCH;
         return null;
     }
-
     private String resolvePath(java.lang.reflect.Method method) {
         if (method.isAnnotationPresent(GET.class))    return method.getAnnotation(GET.class).value().replaceAll("/+$", "");
         if (method.isAnnotationPresent(POST.class))   return method.getAnnotation(POST.class).value().replaceAll("/+$", "");
@@ -124,9 +123,14 @@ public class Router {
         return Collections.unmodifiableList(routes);
     }
 
-    public RouteEntry getRoute(HttpMethod method, String path){
-        for (RouteEntry entry : routes()){
-            if(entry.httpMethod()==method && PathMatcher.matches(entry.pathPattern(), path)) return entry;
+    public RouteEntry getRoute(HttpMethod method, String path) {
+
+
+
+
+        for (RouteEntry entry : routes()) {
+            if (entry.httpMethod() == method && PathMatcher.matches(entry.pathPattern(), path))
+                return entry;
         }
         throw new RouteNotFoundException(path, method);
     }

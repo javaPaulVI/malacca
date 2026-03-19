@@ -25,10 +25,11 @@ public class MalaccaHttpServer {
             throw new ServerStartException(e);
         }
 
-        DocsHandler docsHandler = new DocsHandler(openApiJson, logger);
+
 
 
         if (docsUrl != null) {
+            DocsHandler docsHandler = new DocsHandler(openApiJson, logger);
             server.createContext(docsUrl, docsHandler::handleDocs);
             logger.info("Started docs at {}", docsUrl);
             server.createContext("/openapi.json", docsHandler::handleOpenApi);

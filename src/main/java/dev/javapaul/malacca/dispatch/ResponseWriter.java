@@ -21,7 +21,11 @@ public class ResponseWriter {
         String body;
         try {
             if (response.isJson()) {
-                body = objectMapper.writeValueAsString(response.body());
+                if (response.isUnstructured()) {
+                    body = objectMapper.writeValueAsString(response.bodyFields());
+                } else {
+                    body = objectMapper.writeValueAsString(response.body());
+                }
             } else {
                 body = response.body().toString();
             }

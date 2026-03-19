@@ -70,8 +70,12 @@ public class Request<T> {
         String rawQuery = uri.getQuery();
         this.queryParams = rawQuery == null ? new HashMap<>() : parseQueryParams(rawQuery);
         this.pathParams = pathParams;
-        this.headers = new HashMap<>(exchange.getRequestHeaders());
-        String tempRawBody;
+        // with this — normalize all keys to lowercase at source
+        Map<String, List<String>> normalizedHeaders = new HashMap<>();
+        exchange.getRequestHeaders().forEach((k, v) ->
+                normalizedHeaders.put(k.toLowerCase(), v)
+        );
+        this.headers = normalizedHeaders;        String tempRawBody;
         try {
             tempRawBody = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
         } catch (IOException e) {
@@ -177,9 +181,8 @@ public class Request<T> {
      * @return all values for the given header key, or null if not present
      */
     public List<String> header(String key) {
-        return headers.get(key);
+        return headers.get(key.toLowerCase());
     }
-
     /**
      * Returns the first value of a header by key.
      * Use this for headers that typically appear once, like Authorization.
@@ -196,9 +199,10 @@ public class Request<T> {
      * @return the first value, or null if the header is not present
      */
     public String firstHeader(String key) {
-        List<String> values = headers.get(key);
+        List<String> values = headers.get(key.toLowerCase());
         return values != null ? values.get(0) : null;
     }
+
 
     /**
      * Returns all headers of the request as a map.

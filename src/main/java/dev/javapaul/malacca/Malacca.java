@@ -28,10 +28,11 @@ public class Malacca {
         router.registerControllers(
                 controllers
         );        return this;
+
     }
 
     public void listen(int port){
-        String openApiJson = OpenApiGenerator.generate(router, apiInfo);
+        String openApiJson = docsUrl!=null ? OpenApiGenerator.generate(router, apiInfo) : null;
         httpServer.start(port, name, dispatcher, docsUrl, openApiJson);
     }
 
@@ -54,6 +55,9 @@ public class Malacca {
         dispatcher = new Dispatcher(router, name);
         logger = LoggerFactory.getLogger("Malacca:"+ name);}
 
+    public void stop(){
+        httpServer.stop();
+    }
 
 
 }

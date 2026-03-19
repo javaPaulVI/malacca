@@ -2,61 +2,126 @@ plugins {
     id("java-library")
     id("maven-publish")
     id("signing")
-    id("com.vanniktech.maven.publish") version "0.36.0"
 }
 
-group = "dev.javapaul"
+group = "io.github.javapaulvi"
 version = "0.1.0"
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+    withJavadocJar()
+    withSourcesJar()
+}
 
 repositories {
     mavenCentral()
 }
 
-java {
-    sourceCompatibility = JavaVersion.VERSION_21
-    targetCompatibility = JavaVersion.VERSION_21
-}
-
-
 dependencies {
-    implementation("ch.qos.logback:logback-classic:1.5.13")
+    // JSON serialization
     implementation("com.fasterxml.jackson.core:jackson-databind:2.17.0")
-    implementation("org.slf4j:slf4j-api:2.0.12")
-    implementation("com.fasterxml.jackson.module:jackson-module-jsonSchema:2.17.0")
+
+    // Logging
+    implementation("org.slf4j:slf4j-api:2.0.9")
+    implementation("ch.qos.logback:logback-classic:1.5.13")
+
+    // Testing
+    testImplementation("org.junit.jupiter:junit-jupiter:5.10.0")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
-mavenPublishing {
-    coordinates("io.github.javapaulvi", "malacca", "0.1.0")
+tasks.test {
+    useJUnitPlatform()
+}
 
-    pom {
-        name.set("Malacca")
-        description.set("A lightweight Java API framework, inspired by FastAPI and ExpressJS")
-        inceptionYear.set("2026")
-        url.set("https://github.com/javaPaulVI/malacca#/")
-        licenses {
-            license {
-                name.set("MIT Licence")
-                url.set("https://opensource.org/license/MIT")
-                distribution.set("https://opensource.org/license/MIT")
+tasks.withType<JavaCompile> {
+    options.encoding = "UTF-8"
+}
+
+tasks.withType<Javadoc> {
+    options.encoding = "UTF-8"
+}
+
+publishing {
+    publications {
+        create<MavenPublication>("maven") {
+            groupId = "io.github.javapaulvi"
+            artifactId = "malacca"
+            version = project.version.toString()
+            from(components["java"])
+
+            pom {
+                name = "Malacca"
+                description = "A lightweight Java API framework inspired by FastAPI"
+                url = "https://github.com/javaPaulVI/malacca"
+
+                licenses {
+                    license {
+                        name = "MIT License"
+                        url = "https://opensource.org/licenses/MIT"
+                    }
+                }
+                developers {
+                    developer {
+                        name = "Paul Hipper"
+                        email = "paul@be-hip.eu"
+                    }
+                }
+                scm {
+                    connection = "scm:git:git://github.com/javaPaulVI/malacca.git"
+                    developerConnection = "scm:git:ssh://github.com:javaPaulVI/malacca.git"
+                    url = "https://github.com/javaPaulVI/malacca/tree/main"
+                }
             }
-        }
-        developers {
-            developer {
-                id.set("javaPaulVI")
-                name.set("Paul Hipper")
-                url.set("https://github.com/javaPaulVI/")
-            }
-        }
-        scm {
-            url.set("https://github.com/javaPaulVI/malacca#/")
-            connection.set("scm:git:git://github.com/javaPaulVI/malacca.git")
-            developerConnection.set("scm:git:ssh://git@github.com/javaPaulVI/malacca.git")
         }
     }
 }
 
-mavenPublishing {
-    publishToMavenCentral()
+signing {
+    val signingKeyId = System.getenv("SIGNING_KEY_ID")
+    val signingKeyEncoded = System.getenv("SIGNING_SECRET_KEY")
+    val signingPassword = System.getenv("SIGNING_PASSWORD")
 
-    signAllPublications()
+    if (signingKeyEncoded != null) {
+        val decoded = groovy.json.JsonOutput.toJson(signingKeyEncoded) // wrong approach
+        useInMemoryPgpKeys(signingKeyId, decoded, signingPassword)
+    } else {
+        useGpgCmd()
+    }
+    sign(publishing.publications["maven"])
+}
+
+// -------------------------------------------------------------------------
+// Release task — commit, tag and push to trigger GitHub Actions publish
+// -------------------------------------------------------------------------
+
+tasks.register("release") {
+    group = "publishing"
+    description = "Commits all changes, creates a tag and pushes to GitHub. " +
+            "Usage: ./gradlew release -Pmessage=\"commit message\" -Ptag=\"v0.1.0\""
+
+    doLast {
+        val commitMessage = project.findProperty("message") as String?
+            ?: error("Commit message required — run with -Pmessage=\"your message\"")
+        val tag = project.findProperty("tag") as String?
+            ?: error("Tag required — run with -Ptag=\"v0.1.0\"")
+
+        fun run(vararg cmd: String) {
+            val result = ProcessBuilder(*cmd)
+                .directory(projectDir)
+                .inheritIO()
+                .start()
+                .waitFor()
+            if (result != 0) error("Command failed: ${cmd.joinToString(" ")}")
+        }
+
+        run("git", "add", ".")
+        run("git", "commit", "-m", commitMessage)
+        run("git", "tag", tag)
+        run("git", "push", "origin", "main")
+        run("git", "push", "origin", tag)
+
+        println("Released $tag — GitHub Actions will publish to Maven Central")
+    }
 }
