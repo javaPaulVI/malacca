@@ -146,7 +146,7 @@ tasks.register("releaseToMavenCentral") {
         run("git", "tag", "-a", tagName, "-m", "Version $versionString")
 
         println("Pushing commits and tags...")
-        run("git", "push")
+        run("git", "push", "origin", "main")
         run("git", "push", "--tags")
 
         println("Publishing to Maven Central...")
