@@ -111,20 +111,51 @@ tasks.register("release") {
         val tag = project.findProperty("tag") as String?
             ?: error("Tag required — run with -Ptag=\"v0.1.0\"")
 
-        fun run(vararg cmd: String) {
+        fun run(vararg cmd: String): Int {
             val result = ProcessBuilder(*cmd)
                 .directory(projectDir)
                 .inheritIO()
                 .start()
                 .waitFor()
-            if (result != 0) error("Command failed: ${cmd.joinToString(" ")}")
+            return result
         }
 
-        run("git", "add", ".")
-        run("git", "commit", "-m", "\"$commitMessage $tag\"")
+        // Check if there are changes to commit
+        val statusResult = run("git", "status", "--porcelain")
+
+        // Add and commit only if there are changes
+        val hasChanges = ProcessBuilder("git", "status", "--porcelain")
+            .directory(projectDir)
+            .start()
+            .inputStream
+            .bufferedReader()
+            .readText()
+            .isNotBlank()
+
+        if (hasChanges) {
+            run("git", "add", ".")
+            val commitResult = run("git", "commit", "-m", "$commitMessage $tag")
+            if (commitResult != 0) {
+                println("Warning: Commit failed (maybe nothing to commit)")
+            }
+        } else {
+            println("No changes to commit")
+        }
+
+        // Pull latest changes first
+        println("Pulling latest changes...")
+        val pullResult = run("git", "pull", "origin", "main", "--rebase")
+        if (pullResult != 0) error("Failed to pull latest changes")
+
+        // Create tag
         run("git", "tag", tag)
-        run("git", "push", "origin", "main")
-        run("git", "push", "origin", tag)
+
+        // Push
+        val pushResult = run("git", "push", "origin", "main")
+        if (pushResult != 0) error("Failed to push to main")
+
+        val tagPushResult = run("git", "push", "origin", tag)
+        if (tagPushResult != 0) error("Failed to push tag")
 
         println("Released $tag — GitHub Actions will publish to Maven Central")
     }
