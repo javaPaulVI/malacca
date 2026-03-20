@@ -24,6 +24,7 @@ repositories {
 dependencies {
     implementation("com.fasterxml.jackson.core:jackson-databind:2.17.0")
     implementation("org.slf4j:slf4j-api:2.0.9")
+
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.0")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
@@ -80,8 +81,10 @@ publishing {
     repositories {
         maven {
             name = "ossrh"
+
             val releasesRepoUrl = uri("https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/")
             val snapshotsRepoUrl = uri("https://s01.oss.sonatype.org/content/repositories/snapshots/")
+
             url = if (version.toString().endsWith("SNAPSHOT")) snapshotsRepoUrl else releasesRepoUrl
 
             credentials {
@@ -102,12 +105,12 @@ signing {
 }
 
 // -------------------------------------------------------------------------
-// Release Task — commits everything, tags, pushes, runs tests, publishes
+// Release Task
 // -------------------------------------------------------------------------
 
 tasks.register("release") {
     group = "publishing"
-    description = "Safe local release: test → commit → tag → push → publish"
+    description = "Safe release: test → commit → tag → push → publish"
 
     doLast {
         val version = project.version.toString()
@@ -125,6 +128,14 @@ tasks.register("release") {
             if (exit != 0) error("Command failed: ${cmd.joinToString(" ")}")
         }
 
+        fun output(vararg cmd: String): String {
+            val process = ProcessBuilder(*cmd)
+                .directory(projectDir)
+                .redirectErrorStream(true)
+                .start()
+            return process.inputStream.bufferedReader().readText().trim()
+        }
+
         println("════════════════════════════════════════")
         println("Releasing Malacca $version")
         println("Tag: $tag")
@@ -133,18 +144,23 @@ tasks.register("release") {
         // 1️⃣ Run tests
         run("./gradlew.bat", "test")
 
-        // 2️⃣ Commit everything (safe with .gitignore)
-        run("git", "add", "*")
-        run("git", "commit", "-m", commitMessage)
+        // 2️⃣ Stage and commit changes if there are any
+        val diff = output("git", "diff", "--cached", "--name-only")
+        if (diff.isNotBlank() || pCommitMessage.isNotBlank()) {
+            run("git", "add", "*")
+            run("git", "commit", "-m", commitMessage)
+        } else {
+            println("No changes to commit, continuing...")
+        }
 
-        // 3️⃣ Create annotated tag
-        run("git", "tag", "-a", tag, "-m", "Release $version")
+        // 3️⃣ Create annotated tag (overwrite locally if exists)
+        run("git", "tag", "-f", "-a", tag, "-m", "Release $version")
 
         // 4️⃣ Push commit and tag
         run("git", "push", "origin", "main")
         run("git", "push", "origin", tag)
 
-        // 5️⃣ Publish to Maven Central / OSSRH
+        // 5️⃣ Publish to Maven Central
         run("./gradlew.bat", "publish")
 
         println("════════════════════════════════════════")
