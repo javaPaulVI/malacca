@@ -51,26 +51,22 @@ publishing {
             from(components["java"])
             artifact(tasks["sourcesJar"])
             artifact(tasks["javadocJar"])
-
             pom {
                 name.set("Malacca")
                 description.set("A lightweight Java API framework inspired by FastAPI")
                 url.set("https://github.com/javaPaulVI/malacca")
-
                 licenses {
                     license {
                         name.set("MIT License")
                         url.set("https://opensource.org/licenses/MIT")
                     }
                 }
-
                 developers {
                     developer {
                         name.set("Paul Hipper")
                         email.set("paul@be-hip.eu")
                     }
                 }
-
                 scm {
                     connection.set("scm:git:git://github.com/javaPaulVI/malacca.git")
                     developerConnection.set("scm:git:ssh://github.com:javaPaulVI/malacca.git")
@@ -83,7 +79,7 @@ publishing {
     repositories {
         maven {
             name = "localRepo"
-            url = uri("${buildDir}/local-maven")
+            url = uri("$buildDir/local-maven")
         }
     }
 }
