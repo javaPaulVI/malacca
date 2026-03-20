@@ -23,10 +23,7 @@ repositories {
 
 dependencies {
     implementation("com.fasterxml.jackson.core:jackson-databind:2.17.0")
-
-    // Logging: only API, no implementation
     implementation("org.slf4j:slf4j-api:2.0.9")
-
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.0")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
@@ -44,7 +41,7 @@ tasks.withType<Javadoc> {
 }
 
 // -------------------------------------------------------------------------
-// Maven Publishing (STANDARD + CORRECT)
+// Maven Publishing
 // -------------------------------------------------------------------------
 
 publishing {
@@ -82,36 +79,14 @@ publishing {
 
     repositories {
         maven {
-            name = "central"
-
-            val releasesRepoUrl = uri("https://central.sonatype.com/repository/maven-releases/")
-            val snapshotsRepoUrl = uri("https://central.sonatype.com/repository/maven-snapshots/")
-
-            url = if (version.toString().endsWith("SNAPSHOT")) snapshotsRepoUrl else releasesRepoUrl
-
-            credentials {
-                username = findProperty("centralUsername") as String?
-                    ?: System.getenv("MAVEN_USERNAME")
-
-                password = findProperty("centralPassword") as String?
-                    ?: System.getenv("MAVEN_PASSWORD")
-            }
-        }
-    }
-}
-publishing {
-    repositories {
-        maven {
             name = "ossrh"
             val releasesRepoUrl = uri("https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/")
             val snapshotsRepoUrl = uri("https://s01.oss.sonatype.org/content/repositories/snapshots/")
             url = if (version.toString().endsWith("SNAPSHOT")) snapshotsRepoUrl else releasesRepoUrl
 
             credentials {
-                username = findProperty("centralUsername") as String?
-                    ?: System.getenv("MAVEN_USERNAME")
-                password = findProperty("centralPassword") as String?
-                    ?: System.getenv("MAVEN_PASSWORD")
+                username = findProperty("centralUsername") as String? ?: System.getenv("MAVEN_USERNAME")
+                password = findProperty("centralPassword") as String? ?: System.getenv("MAVEN_PASSWORD")
             }
         }
     }
@@ -127,15 +102,12 @@ signing {
 }
 
 // -------------------------------------------------------------------------
-// SAFE RELEASE TASK
+// Release Task — commits everything, tags, pushes, runs tests, publishes
 // -------------------------------------------------------------------------
 
-// -------------------------------------------------------------------------
-// SAFE RELEASE TASK — PRODUCTION READY
-// -------------------------------------------------------------------------
 tasks.register("release") {
     group = "publishing"
-    description = "Safe local release: test → publish → commit → tag → push"
+    description = "Safe local release: test → commit → tag → push → publish"
 
     doLast {
         val version = project.version.toString()
@@ -153,43 +125,26 @@ tasks.register("release") {
             if (exit != 0) error("Command failed: ${cmd.joinToString(" ")}")
         }
 
-        fun output(vararg cmd: String): String {
-            val process = ProcessBuilder(*cmd)
-                .directory(projectDir)
-                .redirectErrorStream(true)
-                .start()
-            return process.inputStream.bufferedReader().readText().trim()
-        }
-
         println("════════════════════════════════════════")
         println("Releasing Malacca $version")
         println("Tag: $tag")
         println("════════════════════════════════════════")
 
-        // 2️⃣ Check if tag exists remotely
-        val remoteTags = output("git", "ls-remote", "--tags", "origin")
-        if (remoteTags.contains(tag)) {
-            error("Tag $tag already exists remotely.")
-        }
-        // 3️⃣ Run tests
+        // 1️⃣ Run tests
         run("./gradlew.bat", "test")
 
-        // 4️⃣ Stage and commit relevant files (safe with .gitignore)
-        if (pCommitMessage.isNotBlank()) {
-            run("git", "add", "*")
-            run("git", "commit", "-m", "\"$commitMessage\"")
-        } else {
-            println("No changes to commit, proceeding with release.")
-        }
+        // 2️⃣ Commit everything (safe with .gitignore)
+        run("git", "add", "*")
+        run("git", "commit", "-m", commitMessage)
 
-        // 5️⃣ Create annotated tag pointing to the release commit
+        // 3️⃣ Create annotated tag
         run("git", "tag", "-a", tag, "-m", "Release $version")
 
-        // 6️⃣ Push commit and tag
+        // 4️⃣ Push commit and tag
         run("git", "push", "origin", "main")
         run("git", "push", "origin", tag)
 
-        // 7️⃣ Publish to Maven Central
+        // 5️⃣ Publish to Maven Central / OSSRH
         run("./gradlew.bat", "publish")
 
         println("════════════════════════════════════════")
