@@ -10,7 +10,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 
-public class ResponseWriter {
+class ResponseWriter {
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
     public ResponseWriter(){

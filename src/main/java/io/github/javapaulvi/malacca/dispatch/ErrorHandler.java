@@ -7,7 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 
-public class ErrorHandler {
+class ErrorHandler {
     private final ResponseWriter responseWriter;
     private final Logger logger;
 

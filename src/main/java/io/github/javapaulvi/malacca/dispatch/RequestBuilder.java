@@ -17,7 +17,7 @@ import java.util.Map;
 
 
 
-public class RequestBuilder {
+ class RequestBuilder {
 
     public RequestBuilder(){
 
@@ -42,6 +42,7 @@ public class RequestBuilder {
     }
 
     private <T> Request<T> makeRequest(HttpExchange exchange, Map<String, String> pathParams, Class<T> bodyType){
+
         try {
             if (bodyType == null) {
                 return new Request<>(exchange, pathParams);

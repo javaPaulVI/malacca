@@ -8,7 +8,7 @@ import io.github.javapaulvi.malacca.routing.RouteEntry;
 
 import java.lang.reflect.InvocationTargetException;
 
-public class HandlerInvoker {
+class HandlerInvoker {
 
     public HandlerInvoker(){
 
