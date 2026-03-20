@@ -127,9 +127,7 @@ tasks.register("releaseToMavenCentral") {
                 .inheritIO()
                 .start()
             val exit = process.waitFor()
-            if (exit != 0) {
-                println("⚠ Command failed: ${cmd.joinToString(" ")} — continuing")
-            }
+            if (exit != 0) throw GradleException("Command failed: ${cmd.joinToString(" ")}")
         }
         val gradlewCommand = if (System.getProperty("os.name").contains("Windows", ignoreCase = true)) "gradlew.bat" else "./gradlew"
 
@@ -137,7 +135,6 @@ tasks.register("releaseToMavenCentral") {
         val pCommitMessage = findProperty("message")?.toString() ?: "Release version"
         val tagName = "v$versionString"
         val commitMessage = "$pCommitMessage $versionString"
-
         println("Committing changes...")
         run("git", "add", ".")
         run("git", "commit", "-m", commitMessage)
