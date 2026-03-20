@@ -12,6 +12,7 @@ version = "0.1.1"
 java {
     toolchain {
         languageVersion.set(JavaLanguageVersion.of(21))
+        vendor.set(JvmVendorSpec.ADOPTIUM)
     }
     withSourcesJar()
     withJavadocJar()
