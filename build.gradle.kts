@@ -131,7 +131,6 @@ tasks.register("releaseToMavenCentral") {
                 println("⚠ Command failed: ${cmd.joinToString(" ")} — continuing")
             }
         }
-
         val gradlewCommand = if (System.getProperty("os.name").contains("Windows", ignoreCase = true)) "gradlew.bat" else "./gradlew"
 
         val versionString = project.version.toString()
