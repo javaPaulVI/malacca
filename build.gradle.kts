@@ -48,7 +48,12 @@ tasks.withType<Javadoc> {
 publishing {
     publications {
         create<MavenPublication>("mavenJava") {
-            from(components["java"])
+            from(components["java"])  // main jar
+
+            // include sources and javadoc
+            artifact(tasks["sourcesJar"])
+            artifact(tasks["javadocJar"])
+
             pom {
                 name.set("Malacca")
                 description.set("A lightweight Java API framework inspired by FastAPI")
