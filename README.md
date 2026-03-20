@@ -1,6 +1,6 @@
 # Malacca
 
-A lightweight Java API framework inspired by FastAPI. Annotation-based routing, typed request/response models, built-in Swagger UI documentation, and zero magic — everything is explicit.
+A lightweight Java API framework inspired by FastAPI. Annotation-based routing, typed request/response models, built-in Swagger UI documentation and much more.
 
 ---
 
