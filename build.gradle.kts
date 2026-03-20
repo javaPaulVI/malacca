@@ -134,7 +134,6 @@ tasks.register("release") {
         } else {
             println("No changes to commit, proceeding with release.")
         }
-
         // 3️⃣ Create annotated tag
         run("git", "tag", "-a", tag, "-m", "Release $version")
 
