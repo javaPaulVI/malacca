@@ -42,14 +42,13 @@ tasks.withType<Javadoc> {
 }
 
 // -------------------------------------------------------------------------
-// Maven Publishing
+// Maven Publishing (local only)
 // -------------------------------------------------------------------------
 
 publishing {
     publications {
         create<MavenPublication>("mavenJava") {
             from(components["java"])
-
             pom {
                 name.set("Malacca")
                 description.set("A lightweight Java API framework inspired by FastAPI")
@@ -80,17 +79,8 @@ publishing {
 
     repositories {
         maven {
-            name = "ossrh"
-
-            val releasesRepoUrl = uri("https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/")
-            val snapshotsRepoUrl = uri("https://s01.oss.sonatype.org/content/repositories/snapshots/")
-
-            url = if (version.toString().endsWith("SNAPSHOT")) snapshotsRepoUrl else releasesRepoUrl
-
-            credentials {
-                username = findProperty("centralUsername") as String? ?: System.getenv("MAVEN_USERNAME")
-                password = findProperty("centralPassword") as String? ?: System.getenv("MAVEN_PASSWORD")
-            }
+            name = "localRepo"
+            url = uri("${buildDir}/local-maven")
         }
     }
 }
@@ -105,12 +95,12 @@ signing {
 }
 
 // -------------------------------------------------------------------------
-// Release Task
+// SAFE RELEASE TASK — LOCAL UPLOAD ONLY
 // -------------------------------------------------------------------------
 
 tasks.register("release") {
     group = "publishing"
-    description = "Safe release: test → commit → tag → push → publish"
+    description = "Local safe release: test → commit → tag → push → publish locally"
 
     doLast {
         val version = project.version.toString()
@@ -128,14 +118,6 @@ tasks.register("release") {
             if (exit != 0) error("Command failed: ${cmd.joinToString(" ")}")
         }
 
-        fun output(vararg cmd: String): String {
-            val process = ProcessBuilder(*cmd)
-                .directory(projectDir)
-                .redirectErrorStream(true)
-                .start()
-            return process.inputStream.bufferedReader().readText().trim()
-        }
-
         println("════════════════════════════════════════")
         println("Releasing Malacca $version")
         println("Tag: $tag")
@@ -144,27 +126,27 @@ tasks.register("release") {
         // 1️⃣ Run tests
         run("./gradlew.bat", "test")
 
-        // 2️⃣ Stage and commit changes if there are any
-        val diff = output("git", "diff", "--cached", "--name-only")
-        if (diff.isNotBlank() || pCommitMessage.isNotBlank()) {
+        // 2️⃣ Stage & commit changes
+        if (pCommitMessage.isNotBlank()) {
             run("git", "add", "*")
             run("git", "commit", "-m", commitMessage)
         } else {
-            println("No changes to commit, continuing...")
+            println("No changes to commit, proceeding with release.")
         }
 
-        // 3️⃣ Create annotated tag (overwrite locally if exists)
-        run("git", "tag", "-f", "-a", tag, "-m", "Release $version")
+        // 3️⃣ Create annotated tag
+        run("git", "tag", "-a", tag, "-m", "Release $version")
 
         // 4️⃣ Push commit and tag
         run("git", "push", "origin", "main")
         run("git", "push", "origin", tag)
 
-        // 5️⃣ Publish to Maven Central
+        // 5️⃣ Publish artifacts locally
         run("./gradlew.bat", "publish")
 
         println("════════════════════════════════════════")
-        println("✓ Release successful: $version")
+        println("✓ Local release completed: $version")
+        println("Artifacts are in: build/local-maven")
         println("════════════════════════════════════════")
     }
 }
