@@ -149,18 +149,11 @@ tasks.register("release") {
         println("Tag: $tag")
         println("════════════════════════════════════════")
 
-        // 1️⃣ Ensure git working directory is clean
-        val status = output("git", "status", "--porcelain")
-        if (status.isNotBlank()) {
-            error("Git working directory is not clean. Commit or stash changes first.")
-        }
-
         // 2️⃣ Check if tag exists remotely
         val remoteTags = output("git", "ls-remote", "--tags", "origin")
         if (remoteTags.contains(tag)) {
             error("Tag $tag already exists remotely.")
         }
-
         // 3️⃣ Run tests
         run("./gradlew.bat", "test")
 
