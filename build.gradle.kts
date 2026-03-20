@@ -120,6 +120,7 @@ tasks.register("release") {
             if (result != 0) error("Command failed: ${cmd.joinToString(" ")}")
         }
 
+
         run("git", "add", ".")
         run("git", "commit", "-m", "\"$commitMessage $tag\"")
         run("git", "tag", tag)
