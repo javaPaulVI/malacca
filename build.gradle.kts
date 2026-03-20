@@ -162,7 +162,7 @@ tasks.register("release") {
         }
 
         // 3️⃣ Run tests
-        run("./gradlew", "test")
+        run("./gradlew.bat", "test")
 
         // 4️⃣ Stage and commit relevant files (safe with .gitignore)
         if (pCommitMessage.isNotBlank()) {
@@ -180,7 +180,7 @@ tasks.register("release") {
         run("git", "push", "origin", tag)
 
         // 7️⃣ Publish to Maven Central
-        run("./gradlew", "publish")
+        run("./gradlew.bat", "publish")
 
         println("════════════════════════════════════════")
         println("✓ Release successful: $version")
