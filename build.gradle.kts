@@ -167,7 +167,7 @@ tasks.register("release") {
         // 4️⃣ Stage and commit relevant files (safe with .gitignore)
         if (pCommitMessage.isNotBlank()) {
             run("git", "add", "*")
-            run("git", "commit", "-m", commitMessage)
+            run("git", "commit", "-m", "\"$commitMessage\"")
         } else {
             println("No changes to commit, proceeding with release.")
         }
