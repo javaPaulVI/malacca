@@ -92,7 +92,7 @@ publishing {
 
     repositories {
         maven {
-            name = "OSSRH"
+            name = "OSSRH" // this should match <id> in settings.xml if using Maven, not required for Gradle env vars
             url = uri("https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/")
             credentials {
                 username = findProperty("ossrhUsername") as String? ?: System.getenv("OSSRH_USERNAME")
