@@ -149,14 +149,6 @@ tasks.register("release") {
         println("Tag: $tag")
         println("════════════════════════════════════════")
 
-        // 4️⃣ Stage and commit relevant files (safe with .gitignore)
-        if (pCommitMessage.isNotBlank()) {
-            run("git", "add", "*")
-            run("git", "commit", "-m", commitMessage)
-        } else {
-            println("No changes to commit, proceeding with release.")
-        }
-
         // 1️⃣ Ensure git working directory is clean
         val status = output("git", "status", "--porcelain")
         if (status.isNotBlank()) {
@@ -172,7 +164,13 @@ tasks.register("release") {
         // 3️⃣ Run tests
         run("./gradlew", "test")
 
-
+        // 4️⃣ Stage and commit relevant files (safe with .gitignore)
+        if (pCommitMessage.isNotBlank()) {
+            run("git", "add", "*")
+            run("git", "commit", "-m", commitMessage)
+        } else {
+            println("No changes to commit, proceeding with release.")
+        }
 
         // 5️⃣ Create annotated tag pointing to the release commit
         run("git", "tag", "-a", tag, "-m", "Release $version")
