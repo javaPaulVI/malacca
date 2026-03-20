@@ -131,6 +131,7 @@ tasks.register("releaseToMavenCentral") {
         }
         val gradlewCommand = if (System.getProperty("os.name").contains("Windows", ignoreCase = true)) "gradlew.bat" else "./gradlew"
 
+
         val versionString = project.version.toString()
         val pCommitMessage = findProperty("message")?.toString() ?: "Release version"
         val tagName = "v$versionString"
