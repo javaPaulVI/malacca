@@ -125,6 +125,7 @@ tasks.register("release") {
 
         // 1️⃣ Run tests
         run("./gradlew.bat", "test")
+        run("./gradlew.bat", "build")
 
         // 2️⃣ Stage & commit changes
         if (pCommitMessage.isNotBlank()) {
