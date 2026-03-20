@@ -1,9 +1,12 @@
 import org.gradle.api.publish.maven.MavenPublication
-
+import org.gradle.api.tasks.Exec
+import org.gradle.jvm.tasks.Jar
+import org.gradle.api.tasks.javadoc.Javadoc
+import org.gradle.external.javadoc.StandardJavadocDocletOptions
 plugins {
-    id("java-library")
-    id("maven-publish")
-    id("signing")
+    `java-library`
+    `maven-publish`
+    signing
 }
 
 group = "io.github.javapaulvi"
@@ -17,6 +20,16 @@ java {
     withJavadocJar()
 }
 
+tasks.jar {
+    archiveBaseName.set("malacca") // keep Maven coordinates standard
+}
+
+
+
+tasks.withType<Javadoc> {
+    options.encoding = "UTF-8"
+    (options as StandardJavadocDocletOptions).addBooleanOption("html5", true)
+}
 repositories {
     mavenCentral()
 }
@@ -37,12 +50,8 @@ tasks.withType<JavaCompile> {
     options.encoding = "UTF-8"
 }
 
-tasks.withType<Javadoc> {
-    options.encoding = "UTF-8"
-}
-
 // -------------------------------------------------------------------------
-// Maven Publishing (Local Only)
+// Publishing to Maven Central
 // -------------------------------------------------------------------------
 
 publishing {
@@ -51,22 +60,27 @@ publishing {
             from(components["java"])
             artifact(tasks["sourcesJar"])
             artifact(tasks["javadocJar"])
+
             pom {
                 name.set("Malacca")
                 description.set("A lightweight Java API framework inspired by FastAPI")
                 url.set("https://github.com/javaPaulVI/malacca")
+
                 licenses {
                     license {
                         name.set("MIT License")
                         url.set("https://opensource.org/licenses/MIT")
                     }
                 }
+
                 developers {
                     developer {
+                        id.set("paul")
                         name.set("Paul Hipper")
                         email.set("paul@be-hip.eu")
                     }
                 }
+
                 scm {
                     connection.set("scm:git:git://github.com/javaPaulVI/malacca.git")
                     developerConnection.set("scm:git:ssh://github.com:javaPaulVI/malacca.git")
@@ -78,35 +92,34 @@ publishing {
 
     repositories {
         maven {
-            name = "localRepo"
-            url = uri("$buildDir/local-maven")
+            name = "OSSRH"
+            url = uri("https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/")
+            credentials {
+                username = findProperty("ossrhUsername") as String? ?: System.getenv("OSSRH_USERNAME")
+                password = findProperty("ossrhPassword") as String? ?: System.getenv("OSSRH_PASSWORD")
+            }
         }
     }
 }
 
 // -------------------------------------------------------------------------
-// Signing
+// Signing artifacts
 // -------------------------------------------------------------------------
 
 signing {
-    useGpgCmd()
+    useGpgCmd() // or useInMemoryPgpKeys() for CI
     sign(publishing.publications["mavenJava"])
 }
 
 // -------------------------------------------------------------------------
-// SAFE LOCAL RELEASE TASK — WINDOWS-FRIENDLY
+// Custom release task
 // -------------------------------------------------------------------------
 
-tasks.register("release") {
+tasks.register("releaseToMavenCentral") {
     group = "publishing"
-    description = "Local safe release: test → build → commit/tag/push → publish locally"
+    description = "Commits, tags, pushes, and publishes to Maven Central"
 
     doLast {
-        val version = project.version.toString()
-        val tag = "v$version"
-        val pCommitMessage = (project.findProperty("message") as String?).orEmpty()
-        val commitMessage = if (pCommitMessage.isNotBlank()) "$pCommitMessage $tag" else "Release $tag"
-
         fun run(vararg cmd: String) {
             println("→ ${cmd.joinToString(" ")}")
             val process = ProcessBuilder(*cmd)
@@ -119,39 +132,27 @@ tasks.register("release") {
             }
         }
 
-        println("════════════════════════════════════════")
-        println("Releasing Malacca $version")
-        println("Tag: $tag")
-        println("════════════════════════════════════════")
+        val gradlewCommand = if (System.getProperty("os.name").contains("Windows", ignoreCase = true)) "gradlew.bat" else "./gradlew"
 
-        // 1️⃣ Run tests
-        run("gradlew.bat", "test")
+        val versionString = project.version.toString()
+        val pCommitMessage = findProperty("message")?.toString() ?: "Release version"
+        val tagName = "v$versionString"
+        val commitMessage = "$pCommitMessage $versionString"
 
-        // 2️⃣ Build artifacts
-        run("gradlew.bat", "build")
+        println("Committing changes...")
+        run("git", "add", ".")
+        run("git", "commit", "-m", commitMessage)
 
-        // 3️⃣ Stage & commit changes
-        if (pCommitMessage.isNotBlank()) {
-            run("git", "add", "*")
-            run("git", "commit", "-m", commitMessage)
-        } else {
-            println("No changes to commit, proceeding with release.")
-        }
+        println("Creating Git tag $tagName...")
+        run("git", "tag", "-a", tagName, "-m", "Version $versionString")
 
-        // 4️⃣ Create annotated tag
-        run("git", "tag", "-a", tag, "-m", "Release $version")
+        println("Pushing commits and tags...")
+        run("git", "push")
+        run("git", "push", "--tags")
 
-        // 5️⃣ Push commit and tag
-        run("git", "push", "origin", "main")
-        run("git", "push", "origin", tag)
+        println("Publishing to Maven Central...")
+        run(gradlewCommand, "publish")
 
-        // 6️⃣ Publish locally by invoking the Gradle task safely
-        println("→ Publishing artifacts locally to build/local-maven")
-        run("gradlew.bat", "publish")
-
-        println("════════════════════════════════════════")
-        println("✓ Local release completed: $version")
-        println("Artifacts are in: build/local-maven")
-        println("════════════════════════════════════════")
+        println("Release $versionString completed successfully!")
     }
 }
