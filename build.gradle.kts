@@ -42,15 +42,13 @@ tasks.withType<Javadoc> {
 }
 
 // -------------------------------------------------------------------------
-// Maven Publishing (local only)
+// Maven Publishing (Local Only)
 // -------------------------------------------------------------------------
 
 publishing {
     publications {
         create<MavenPublication>("mavenJava") {
-            from(components["java"])  // main jar
-
-            // include sources and javadoc
+            from(components["java"])
             artifact(tasks["sourcesJar"])
             artifact(tasks["javadocJar"])
 
@@ -105,7 +103,7 @@ signing {
 
 tasks.register("release") {
     group = "publishing"
-    description = "Local safe release: test → commit → tag → push → publish locally"
+    description = "Local safe release: test → tag → push → publish locally"
 
     doLast {
         val version = project.version.toString()
@@ -128,25 +126,38 @@ tasks.register("release") {
         println("Tag: $tag")
         println("════════════════════════════════════════")
 
-        // 1️⃣ Run tests
+        // 1️⃣ Run tests & build
         run("./gradlew.bat", "test")
         run("./gradlew.bat", "build")
 
-        // 2️⃣ Stage & commit changes
+        // 2️⃣ Safe Git commit (skip if nothing to commit)
         if (pCommitMessage.isNotBlank()) {
-            run("git", "add", "*")
-            run("git", "commit", "-m", commitMessage)
+            try {
+                run("git", "add", "*")
+                run("git", "commit", "-m", commitMessage)
+            } catch (e: Exception) {
+                println("⚠ Git commit skipped: ${e.message}")
+            }
         } else {
             println("No changes to commit, proceeding with release.")
         }
-        // 3️⃣ Create annotated tag
-        run("git", "tag", "-a", tag, "-m", "Release $version")
+
+        // 3️⃣ Create annotated tag (will fail if tag exists)
+        try {
+            run("git", "tag", "-a", tag, "-m", "Release $version")
+        } catch (e: Exception) {
+            println("⚠ Tag creation skipped: ${e.message}")
+        }
 
         // 4️⃣ Push commit and tag
-        run("git", "push", "origin", "main")
-        run("git", "push", "origin", tag)
+        try {
+            run("git", "push", "origin", "main")
+            run("git", "push", "origin", tag)
+        } catch (e: Exception) {
+            println("⚠ Git push skipped: ${e.message}")
+        }
 
-        // 5️⃣ Publish artifacts locally
+        // 5️⃣ Publish locally
         run("./gradlew.bat", "publish")
 
         println("════════════════════════════════════════")
