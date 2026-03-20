@@ -1,4 +1,4 @@
-import java.io.File
+import org.gradle.api.publish.maven.MavenPublication
 
 plugins {
     id("java-library")
@@ -7,13 +7,14 @@ plugins {
 }
 
 group = "io.github.javapaulvi"
-version = "0.1.0"
+version = "0.1.1"
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_21
-    targetCompatibility = JavaVersion.VERSION_21
-    withJavadocJar()
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(21))
+    }
     withSourcesJar()
+    withJavadocJar()
 }
 
 repositories {
@@ -21,14 +22,11 @@ repositories {
 }
 
 dependencies {
-    // JSON serialization
     implementation("com.fasterxml.jackson.core:jackson-databind:2.17.0")
 
-    // Logging
+    // Logging: only API, no implementation
     implementation("org.slf4j:slf4j-api:2.0.9")
-    implementation("ch.qos.logback:logback-classic:1.5.13")
 
-    // Testing
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.0")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
@@ -45,118 +43,149 @@ tasks.withType<Javadoc> {
     options.encoding = "UTF-8"
 }
 
+// -------------------------------------------------------------------------
+// Maven Publishing (STANDARD + CORRECT)
+// -------------------------------------------------------------------------
+
 publishing {
     publications {
-        create<MavenPublication>("maven") {
-            groupId = "io.github.javapaulvi"
-            artifactId = "malacca"
-            version = project.version.toString()
+        create<MavenPublication>("mavenJava") {
             from(components["java"])
 
             pom {
-                name = "Malacca"
-                description = "A lightweight Java API framework inspired by FastAPI"
-                url = "https://github.com/javaPaulVI/malacca"
+                name.set("Malacca")
+                description.set("A lightweight Java API framework inspired by FastAPI")
+                url.set("https://github.com/javaPaulVI/malacca")
 
                 licenses {
                     license {
-                        name = "MIT License"
-                        url = "https://opensource.org/licenses/MIT"
+                        name.set("MIT License")
+                        url.set("https://opensource.org/licenses/MIT")
                     }
                 }
+
                 developers {
                     developer {
-                        name = "Paul Hipper"
-                        email = "paul@be-hip.eu"
+                        name.set("Paul Hipper")
+                        email.set("paul@be-hip.eu")
                     }
                 }
+
                 scm {
-                    connection = "scm:git:git://github.com/javaPaulVI/malacca.git"
-                    developerConnection = "scm:git:ssh://github.com:javaPaulVI/malacca.git"
-                    url = "https://github.com/javaPaulVI/malacca/tree/main"
+                    connection.set("scm:git:git://github.com/javaPaulVI/malacca.git")
+                    developerConnection.set("scm:git:ssh://github.com:javaPaulVI/malacca.git")
+                    url.set("https://github.com/javaPaulVI/malacca")
                 }
+            }
+        }
+    }
+
+    repositories {
+        maven {
+            name = "central"
+
+            val releasesRepoUrl = uri("https://central.sonatype.com/repository/maven-releases/")
+            val snapshotsRepoUrl = uri("https://central.sonatype.com/repository/maven-snapshots/")
+
+            url = if (version.toString().endsWith("SNAPSHOT")) snapshotsRepoUrl else releasesRepoUrl
+
+            credentials {
+                username = findProperty("centralUsername") as String?
+                    ?: System.getenv("MAVEN_USERNAME")
+
+                password = findProperty("centralPassword") as String?
+                    ?: System.getenv("MAVEN_PASSWORD")
             }
         }
     }
 }
 
+// -------------------------------------------------------------------------
+// Signing
+// -------------------------------------------------------------------------
+
 signing {
-    val keyFile = File(System.getProperty("user.home") + "/.gpg/keyfile")
-
-    if (keyFile.exists()) {
-        val keyContent = keyFile.readText(Charsets.UTF_8)  // read raw ASCII-armored key
-        val password = System.getenv("SIGNING_PASSWORD") ?: error("SIGNING_PASSWORD is missing")
-
-        useInMemoryPgpKeys(keyContent, password)
-        println("Using in-memory signing key from ${keyFile.absolutePath}")
-    } else {
-        println("No key file found, using gpg command if available")
-        useGpgCmd()  // fallback
-    }
-
-    sign(publishing.publications["maven"])
+    useGpgCmd()
+    sign(publishing.publications["mavenJava"])
 }
+
 // -------------------------------------------------------------------------
-// Release task — commit, tag and push to trigger GitHub Actions publish
+// SAFE RELEASE TASK
 // -------------------------------------------------------------------------
 
+// -------------------------------------------------------------------------
+// SAFE RELEASE TASK — PRODUCTION READY
+// -------------------------------------------------------------------------
 tasks.register("release") {
     group = "publishing"
-    description = "Commits all changes, creates a tag and pushes to GitHub. " +
-            "Usage: ./gradlew release -Pmessage=\"commit message\" -Ptag=\"v0.1.0\""
+    description = "Safe local release: test → publish → commit → tag → push"
 
     doLast {
-        val commitMessage = project.findProperty("message") as String?
-            ?: error("Commit message required — run with -Pmessage=\"your message\"")
-        val tag = project.findProperty("tag") as String?
-            ?: error("Tag required — run with -Ptag=\"v0.1.0\"")
+        val version = project.version.toString()
+        val tag = "v$version"
+        val pCommitMessage = (project.findProperty("message") as String?).orEmpty()
+        val commitMessage = if (pCommitMessage.isNotBlank()) "$pCommitMessage $tag" else "Release $tag"
 
-        fun run(vararg cmd: String): Int {
-            val result = ProcessBuilder(*cmd)
+        fun run(vararg cmd: String) {
+            println("→ ${cmd.joinToString(" ")}")
+            val process = ProcessBuilder(*cmd)
                 .directory(projectDir)
                 .inheritIO()
                 .start()
-                .waitFor()
-            return result
+            val exit = process.waitFor()
+            if (exit != 0) error("Command failed: ${cmd.joinToString(" ")}")
         }
 
-        // Check if there are changes to commit
-        val statusResult = run("git", "status", "--porcelain")
+        fun output(vararg cmd: String): String {
+            val process = ProcessBuilder(*cmd)
+                .directory(projectDir)
+                .redirectErrorStream(true)
+                .start()
+            return process.inputStream.bufferedReader().readText().trim()
+        }
 
-        // Add and commit only if there are changes
-        val hasChanges = ProcessBuilder("git", "status", "--porcelain")
-            .directory(projectDir)
-            .start()
-            .inputStream
-            .bufferedReader()
-            .readText()
-            .isNotBlank()
+        println("════════════════════════════════════════")
+        println("Releasing Malacca $version")
+        println("Tag: $tag")
+        println("════════════════════════════════════════")
 
-        if (hasChanges) {
-            run("git", "add", ".")
-            val commitResult = run("git", "commit", "-m", "$commitMessage $tag")
-            if (commitResult != 0) {
-                println("Warning: Commit failed (maybe nothing to commit)")
-            }
+        // 4️⃣ Stage and commit relevant files (safe with .gitignore)
+        if (pCommitMessage.isNotBlank()) {
+            run("git", "add", "*")
+            run("git", "commit", "-m", commitMessage)
         } else {
-            println("No changes to commit")
+            println("No changes to commit, proceeding with release.")
         }
 
-        // Pull latest changes first
-        println("Pulling latest changes...")
-        val pullResult = run("git", "pull", "origin", "main", "--rebase")
-        if (pullResult != 0) error("Failed to pull latest changes")
+        // 1️⃣ Ensure git working directory is clean
+        val status = output("git", "status", "--porcelain")
+        if (status.isNotBlank()) {
+            error("Git working directory is not clean. Commit or stash changes first.")
+        }
 
-        // Create tag
-        run("git", "tag", tag)
+        // 2️⃣ Check if tag exists remotely
+        val remoteTags = output("git", "ls-remote", "--tags", "origin")
+        if (remoteTags.contains(tag)) {
+            error("Tag $tag already exists remotely.")
+        }
 
-        // Push
-        val pushResult = run("git", "push", "origin", "main")
-        if (pushResult != 0) error("Failed to push to main")
+        // 3️⃣ Run tests
+        run("./gradlew", "test")
 
-        val tagPushResult = run("git", "push", "origin", tag)
-        if (tagPushResult != 0) error("Failed to push tag")
 
-        println("Released $tag — GitHub Actions will publish to Maven Central")
+
+        // 5️⃣ Create annotated tag pointing to the release commit
+        run("git", "tag", "-a", tag, "-m", "Release $version")
+
+        // 6️⃣ Push commit and tag
+        run("git", "push", "origin", "main")
+        run("git", "push", "origin", tag)
+
+        // 7️⃣ Publish to Maven Central
+        run("./gradlew", "publish")
+
+        println("════════════════════════════════════════")
+        println("✓ Release successful: $version")
+        println("════════════════════════════════════════")
     }
 }
