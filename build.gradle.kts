@@ -58,8 +58,8 @@ publishing {
     publications {
         create<MavenPublication>("mavenJava") {
             from(components["java"])
-            artifact(tasks["sourcesJar"])
-            artifact(tasks["javadocJar"])
+            //artifact(tasks["sourcesJar"])
+            //artifact(tasks["javadocJar"])
 
             pom {
                 name.set("Malacca")
