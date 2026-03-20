@@ -120,36 +120,69 @@ tasks.register("releaseToMavenCentral") {
     description = "Commits, tags, pushes, and publishes to Maven Central"
 
     doLast {
+        // ------------- Helper function -------------
         fun run(vararg cmd: String) {
             println("→ ${cmd.joinToString(" ")}")
             val process = ProcessBuilder(*cmd)
                 .directory(projectDir)
-                .inheritIO()
+                .redirectErrorStream(true) // merge stdout + stderr
                 .start()
+
+            val output = process.inputStream.bufferedReader().readText()
+            println(output)
+
             val exit = process.waitFor()
-            if (exit != 0) throw GradleException("Command failed: ${cmd.joinToString(" ")}")
+            if (exit != 0) throw GradleException("Command failed: ${cmd.joinToString(" ")}\n$output")
         }
-        val gradlewCommand = if (System.getProperty("os.name").contains("Windows", ignoreCase = true)) "gradlew.bat" else "./gradlew"
 
-
+        // ------------- Parameters -------------
+        val commitMessage = findProperty("message")?.toString() ?: "Release version ${project.version}"
         val versionString = project.version.toString()
-        val pCommitMessage = findProperty("message")?.toString() ?: "Release version"
         val tagName = "v$versionString"
-        val commitMessage = "$pCommitMessage $versionString"
-        println("Committing changes...")
-        run("git", "add", ".")
-        run("git", "commit", "-m", commitMessage)
+        val gradlewCmd =
+            if (System.getProperty("os.name").contains("Windows", ignoreCase = true)) "gradlew.bat" else "./gradlew"
 
-        println("Creating Git tag $tagName...")
+        // ------------- Git commit -------------
+        val status = ProcessBuilder("git", "status", "--porcelain")
+            .directory(projectDir)
+            .start()
+            .inputStream.bufferedReader().readText().trim()
+
+        if (status.isNotEmpty()) {
+            run("git", "add", ".")
+            run("git", "commit", "-m", commitMessage)
+        } else {
+            println("→ No changes to commit")
+        }
+
+        // ------------- Delete existing tags -------------
+        val tagExists = runCatching {
+            ProcessBuilder("git", "rev-parse", "--verify", tagName)
+                .directory(projectDir)
+                .start()
+                .waitFor() == 0
+        }.getOrElse { false }
+
+        if (tagExists) {
+            println("→ Deleting existing local tag $tagName")
+            run("git", "tag", "-d", tagName)
+            println("→ Deleting existing remote tag $tagName")
+            run("git", "push", "origin", ":refs/tags/$tagName")
+        }
+
+        // ------------- Create new tag -------------
+        println("→ Creating Git tag $tagName")
         run("git", "tag", "-a", tagName, "-m", "Version $versionString")
 
-        println("Pushing commits and tags...")
+        // ------------- Push commits and tags -------------
+        println("→ Pushing commits and tags")
         run("git", "push", "origin", "main")
         run("git", "push", "--tags")
 
-        println("Publishing to Maven Central...")
-        run(gradlewCommand, "publish")
+        // ------------- Publish to Maven Central -------------
+        println("→ Publishing version $versionString to Maven Central")
+        run(gradlewCmd, "publish")
 
-        println("Release $versionString completed successfully!")
+        println("✅ Release $versionString completed successfully!")
     }
 }
