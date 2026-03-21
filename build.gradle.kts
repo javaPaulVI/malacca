@@ -86,10 +86,10 @@ tasks.register("release") {
     description = "Commit, tag, push, and upload to Maven Central Portal"
 
     doLast {
+        val commitMessage: String by project
         val versionString = project.version.toString()
         val tagName = "v$versionString"
         val gradlewCmd = if (System.getProperty("os.name").contains("Windows", ignoreCase = true)) "gradlew.bat" else "./gradlew"
-
         fun run(vararg cmd: String) {
             println("→ ${cmd.joinToString(" ")}")
             val process = ProcessBuilder(*cmd).directory(projectDir).inheritIO().start()
