@@ -5,7 +5,7 @@ import org.gradle.api.tasks.javadoc.Javadoc
 import org.gradle.external.javadoc.StandardJavadocDocletOptions
 plugins {
     `java-library`
-    id("com.vanniktech.maven.publish") version "0.36.0"
+    id("com.vanniktech.maven.publish") version "0.33.0"
     signing
 }
 
@@ -27,6 +27,11 @@ dependencies {
 
 tasks.test {
     useJUnitPlatform()
+}
+mavenPublishing {
+    publishToMavenCentral()
+
+    signAllPublications()
 }
 
 
@@ -66,7 +71,7 @@ mavenPublishing {
 // Custom release task
 // -------------------------------------------------------------------------
 
-tasks.register("releaseToMavenCentral") {
+tasks.register("release") {
     group = "publishing"
     description = "Commits, tags, pushes, and publishes to Maven Central"
 
@@ -132,7 +137,7 @@ tasks.register("releaseToMavenCentral") {
 
         // ------------- Publish to Maven Central -------------
         println("→ Publishing version $versionString to Maven Central")
-        run(gradlewCmd, "publishToMavenCentral")
+        run(gradlewCmd, "publishMavenPublicationToMavenCentral")
 
         println("✅ Release $versionString completed successfully!")
     }
