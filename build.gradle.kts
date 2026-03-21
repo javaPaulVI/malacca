@@ -5,31 +5,14 @@ import org.gradle.api.tasks.javadoc.Javadoc
 import org.gradle.external.javadoc.StandardJavadocDocletOptions
 plugins {
     `java-library`
-    `maven-publish`
+    id("com.vanniktech.maven.publish") version "0.36.0"
     signing
 }
 
 group = "io.github.javapaulvi"
 version = "0.1.1"
 
-java {
-    toolchain {
-        languageVersion.set(JavaLanguageVersion.of(25))
-    }
-    withSourcesJar()
-    withJavadocJar()
-}
 
-tasks.jar {
-    archiveBaseName.set("malacca") // keep Maven coordinates standard
-}
-
-
-
-tasks.withType<Javadoc> {
-    options.encoding = "UTF-8"
-    (options as StandardJavadocDocletOptions).addBooleanOption("html5", true)
-}
 repositories {
     mavenCentral()
 }
@@ -46,70 +29,38 @@ tasks.test {
     useJUnitPlatform()
 }
 
-tasks.withType<JavaCompile> {
-    options.encoding = "UTF-8"
-}
 
-// -------------------------------------------------------------------------
-// Publishing to Maven Central
-// -------------------------------------------------------------------------
+mavenPublishing {
+    coordinates("io.github.javapaulvi", "malacca", version.toString())
 
-publishing {
-    publications {
-        create<MavenPublication>("mavenJava") {
-            from(components["java"])
-            //artifact(tasks["sourcesJar"])
-            //artifact(tasks["javadocJar"])
-
-            pom {
-                name.set("Malacca")
-                description.set("A lightweight Java API framework inspired by FastAPI")
-                url.set("https://github.com/javaPaulVI/malacca")
-
-                licenses {
-                    license {
-                        name.set("MIT License")
-                        url.set("https://opensource.org/licenses/MIT")
-                    }
-                }
-
-                developers {
-                    developer {
-                        id.set("paul")
-                        name.set("Paul Hipper")
-                        email.set("paul@be-hip.eu")
-                    }
-                }
-
-                scm {
-                    connection.set("scm:git:git://github.com/javaPaulVI/malacca.git")
-                    developerConnection.set("scm:git:ssh://github.com:javaPaulVI/malacca.git")
-                    url.set("https://github.com/javaPaulVI/malacca")
-                }
+    pom {
+        name.set("Malacca")
+        description.set("A lightweight Java API framework, inspired by FastAPI and ExpressJS")
+        inceptionYear.set("2026")
+        url.set("https://github.com/javaPaulVI/malacca")
+        licenses {
+            license {
+                name.set("MIT Licence")
+                url.set("https://opensource.org/license/mit")
+                distribution.set("https://opensource.org/license/mit")
             }
         }
-    }
-
-    repositories {
-        maven {
-            name = "OSSRH" // this should match <id> in settings.xml if using Maven, not required for Gradle env vars
-            url = uri("https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/")
-            credentials {
-                username = findProperty("ossrhUsername") as String? ?: System.getenv("OSSRH_USERNAME")
-                password = findProperty("ossrhPassword") as String? ?: System.getenv("OSSRH_PASSWORD")
+        developers {
+            developer {
+                id.set("paul")
+                name.set("Paul Hipper")
+                url.set("https://github.com/javaPaulVI")
             }
+        }
+        scm {
+            url.set("https://github.com/javaPaulVI/malacca")
+            connection.set("scm:git:git://github.com/javaPaulVI/malacca.git")
+            developerConnection.set("scm:git:ssh://git@github.com/javaPaulVI/malacca.git")
         }
     }
 }
 
-// -------------------------------------------------------------------------
-// Signing artifacts
-// -------------------------------------------------------------------------
 
-signing {
-    useGpgCmd() // or useInMemoryPgpKeys() for CI
-    sign(publishing.publications["mavenJava"])
-}
 
 // -------------------------------------------------------------------------
 // Custom release task
@@ -181,7 +132,7 @@ tasks.register("releaseToMavenCentral") {
 
         // ------------- Publish to Maven Central -------------
         println("→ Publishing version $versionString to Maven Central")
-        run(gradlewCmd, "publish")
+        run(gradlewCmd, "publishToMavenCentral")
 
         println("✅ Release $versionString completed successfully!")
     }
