@@ -1,17 +1,12 @@
-import org.gradle.api.publish.maven.MavenPublication
-import org.gradle.api.tasks.Exec
-import org.gradle.jvm.tasks.Jar
-import org.gradle.api.tasks.javadoc.Javadoc
-import org.gradle.external.javadoc.StandardJavadocDocletOptions
 plugins {
     `java-library`
-    id("com.vanniktech.maven.publish") version "0.33.0"
+    id ("org.danilopianini.publish-on-central") version "9.1.14"
     signing
 }
 
 group = "io.github.javapaulvi"
 version = "0.1.1"
-
+description = "A lightweight Java API framework, inspired by FastAPI and ExpressJS"
 
 repositories {
     mavenCentral()
@@ -28,117 +23,96 @@ dependencies {
 tasks.test {
     useJUnitPlatform()
 }
-mavenPublishing {
-    publishToMavenCentral()
 
-    signAllPublications()
+// ------------------- Publish-on-Central Setup -------------------
+publishOnCentral {
+    repoOwner.set("javaPaulVI")
+    projectDescription.set("A lightweight Java API framework, inspired by FastAPI and ExpressJS")
+    projectLongName.set("Malacca")
+    projectUrl.set("https://github.com/javaPaulVI/malacca")
+    scmConnection.set("scm:git:https://github.com/javaPaulVI/malacca.git")
+    licenseName.set("MIT License")
+    licenseUrl.set("https://opensource.org/licenses/MIT")
 }
 
-
-mavenPublishing {
-    coordinates("io.github.javapaulvi", "malacca", version.toString())
-
-    pom {
-        name.set("Malacca")
-        description.set("A lightweight Java API framework, inspired by FastAPI and ExpressJS")
-        inceptionYear.set("2026")
-        url.set("https://github.com/javaPaulVI/malacca")
-        licenses {
-            license {
-                name.set("MIT Licence")
-                url.set("https://opensource.org/license/mit")
-                distribution.set("https://opensource.org/license/mit")
+// ------------------- Maven metadata -------------------
+publishing {
+    publications {
+        withType<MavenPublication> {
+            pom {
+                name.set("Malacca")
+                description.set("A lightweight Java API framework, inspired by FastAPI and ExpressJS")
+                url.set("https://github.com/javaPaulVI/malacca")
+                licenses {
+                    license {
+                        name.set("MIT License")
+                        url.set("https://opensource.org/licenses/MIT")
+                    }
+                }
+                developers {
+                    developer {
+                        id.set("paul")
+                        name.set("Paul Hipper")
+                        url.set("https://github.com/javaPaulVI")
+                    }
+                }
+                scm {
+                    connection.set("scm:git:https://github.com/javaPaulVI/malacca.git")
+                    developerConnection.set("scm:git:ssh://git@github.com/javaPaulVI/malacca.git")
+                    url.set("https://github.com/javaPaulVI/malacca")
+                }
             }
-        }
-        developers {
-            developer {
-                id.set("paul")
-                name.set("Paul Hipper")
-                url.set("https://github.com/javaPaulVI")
-            }
-        }
-        scm {
-            url.set("https://github.com/javaPaulVI/malacca")
-            connection.set("scm:git:git://github.com/javaPaulVI/malacca.git")
-            developerConnection.set("scm:git:ssh://git@github.com/javaPaulVI/malacca.git")
         }
     }
 }
 
+// ------------------- Signing -------------------
+signing {
+    val signingKey: String? by project
+    val signingPassword: String? by project
+    useInMemoryPgpKeys(signingKey, signingPassword)
+    sign(publishing.publications)
+}
+
+// ------------------- Dokka/Javadoc integration -------------------
 
 
-// -------------------------------------------------------------------------
-// Custom release task
-// -------------------------------------------------------------------------
 
+
+
+// ------------------- Optional: Git Release Task -------------------
 tasks.register("release") {
     group = "publishing"
-    description = "Commits, tags, pushes, and publishes to Maven Central"
+    description = "Commit, tag, push, and upload to Maven Central Portal"
 
     doLast {
-        // ------------- Helper function -------------
-        fun run(vararg cmd: String) {
-            println("→ ${cmd.joinToString(" ")}")
-            val process = ProcessBuilder(*cmd)
-                .directory(projectDir)
-                .redirectErrorStream(true) // merge stdout + stderr
-                .start()
-
-            val output = process.inputStream.bufferedReader().readText()
-            println(output)
-
-            val exit = process.waitFor()
-            if (exit != 0) throw GradleException("Command failed: ${cmd.joinToString(" ")}\n$output")
-        }
-
-        // ------------- Parameters -------------
-        val commitMessage = findProperty("message")?.toString() ?: "Release version ${project.version}"
         val versionString = project.version.toString()
         val tagName = "v$versionString"
-        val gradlewCmd =
-            if (System.getProperty("os.name").contains("Windows", ignoreCase = true)) "gradlew.bat" else "./gradlew"
+        val gradlewCmd = if (System.getProperty("os.name").contains("Windows", ignoreCase = true)) "gradlew.bat" else "./gradlew"
 
-        // ------------- Git commit -------------
-        val status = ProcessBuilder("git", "status", "--porcelain")
-            .directory(projectDir)
-            .start()
-            .inputStream.bufferedReader().readText().trim()
+        fun run(vararg cmd: String) {
+            println("→ ${cmd.joinToString(" ")}")
+            val process = ProcessBuilder(*cmd).directory(projectDir).inheritIO().start()
+            val exit = process.waitFor()
+            if (exit != 0) throw GradleException("Command failed: ${cmd.joinToString(" ")}")
+        }
 
+        // Git commit
+        val status = ProcessBuilder("git", "status", "--porcelain").directory(projectDir)
+            .start().inputStream.bufferedReader().readText().trim()
         if (status.isNotEmpty()) {
             run("git", "add", ".")
-            run("git", "commit", "-m", commitMessage)
-        } else {
-            println("→ No changes to commit")
-        }
+            run("git", "commit", "-m", "Release $versionString")
+        } else println("→ No changes to commit")
 
-        // ------------- Delete existing tags -------------
-        val tagExists = runCatching {
-            ProcessBuilder("git", "rev-parse", "--verify", tagName)
-                .directory(projectDir)
-                .start()
-                .waitFor() == 0
-        }.getOrElse { false }
-
-        if (tagExists) {
-            println("→ Deleting existing local tag $tagName")
-            run("git", "tag", "-d", tagName)
-            println("→ Deleting existing remote tag $tagName")
-            run("git", "push", "origin", ":refs/tags/$tagName")
-        }
-
-        // ------------- Create new tag -------------
-        println("→ Creating Git tag $tagName")
+        // Git tag
         run("git", "tag", "-a", tagName, "-m", "Version $versionString")
-
-        // ------------- Push commits and tags -------------
-        println("→ Pushing commits and tags")
         run("git", "push", "origin", "main")
         run("git", "push", "--tags")
 
-        // ------------- Publish to Maven Central -------------
-        println("→ Publishing version $versionString to Maven Central")
-        run(gradlewCmd, "publishMavenPublicationToMavenCentral")
-
-        println("✅ Release $versionString completed successfully!")
+        // Maven Central Portal upload
+        run(gradlewCmd, "publishAllPublicationsToProjectLocalRepository")
+        run(gradlewCmd, "zipMavenCentralPortalPublication")
+        run(gradlewCmd, "releaseMavenCentralPortalPublication")
     }
 }
